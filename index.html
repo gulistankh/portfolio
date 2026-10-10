@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+  function makeCircularFavicon(imageSrc) {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 64;
+      canvas.height = 64;
+      const ctx = canvas.getContext('2d');
+
+      // Draw circular clipping mask
+      ctx.beginPath();
+      ctx.arc(32, 32, 32, 0, Math.PI * 2);
+      ctx.closePath();
+      ctx.clip();
+
+      // Draw image inside clip
+      ctx.drawImage(img, 0, 0, 64, 64);
+
+      // Update icon link tag
+      let link = document.querySelector("link[rel*='icon']") || document.createElement('link');
+      link.type = 'image/x-icon';
+      link.rel = 'shortcut icon';
+      link.href = canvas.toDataURL();
+      document.getElementsByTagName('head')[0].appendChild(link);
+    };
+    img.src = imageSrc;
+  }
+
+  // Run with your image path
+  makeCircularFavicon('favicon.PNG');
+</script>
+    <link rel="icon" type="image/svg+xml" href="/favicon.PNG" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>portfolio</title>
+  </head>
+  <body style="margin: 0; padding: 0; background-color: #000000;">
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
