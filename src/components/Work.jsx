@@ -1,14 +1,20 @@
 import { useEffect, useRef } from "react";
 import { motion, useInView, useReducedMotion } from "framer-motion";
+import saasboardCover from "../assets/saasboard-cover.png";
 // Example once you have clips: import clip1 from "../assets/videos/project-one.mp4";
 
 /* ───────────── CONTENT (edit these) ───────────── */
 const PROJECTS = [
   {
-    title: "Project One",
-    description: "New projects in progress. Live previews coming soon ⏳",
-    url: "#",
-    video: "", // when you add a video, it replaces the animated background
+    title: "SaaSBoard",
+    description:
+      "A secure team workspace and analytics dashboard with roles, invites and a live database. Try the demo, no sign-up needed.",
+    url: "https://saasboard-app.vercel.app",
+    caseStudy:
+      "https://github.com/gulistankh/saasboard/blob/main/docs/case-study.md",
+    image: saasboardCover, // shown as the card background
+    live: true,
+    video: "", // when you add a video, it replaces the image
     poster: "",
   },
   {
@@ -70,7 +76,7 @@ function ProjectCard({ project, index }) {
   const inView = useInView(cardRef, { amount: 0.45 });
   const isExternal = /^https?:\/\//.test(project.url);
   const bgKind = BACKGROUNDS[index % BACKGROUNDS.length];
-  const comingSoon = !project.video;
+  const isLive = Boolean(project.live);
 
   // Play only while on screen (saves battery and bandwidth), pause otherwise
   useEffect(() => {
@@ -101,13 +107,20 @@ function ProjectCard({ project, index }) {
             preload="metadata"
             aria-hidden="true"
           />
+        ) : project.image ? (
+          <img
+            className="wk-video"
+            src={project.image}
+            alt=""
+            aria-hidden="true"
+          />
         ) : (
           <AnimatedBg kind={bgKind} />
         )}
         <div className="wk-shade" aria-hidden="true" />
 
         <div className="wk-top">
-          {comingSoon && (
+          {!isLive && (
             <span className="wk-tag">
               <span className="wk-dot" aria-hidden="true" />
               Coming soon
@@ -118,17 +131,32 @@ function ProjectCard({ project, index }) {
         <div className="wk-body">
           <h3 className="wk-title">{project.title}</h3>
           <p className="wk-desc">{project.description}</p>
-          <a
-            className="wk-btn"
-            href={project.url}
-            {...(isExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-            aria-label={`Visit live site: ${project.title}${isExternal ? " (opens in a new tab)" : ""}`}
-          >
-            Visit live site
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M7 17L17 7M9 7h8v8" />
-            </svg>
-          </a>
+
+          <div className="wk-actions">
+            <a
+              className="wk-btn"
+              href={project.url}
+              {...(isExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+              aria-label={`Visit live site: ${project.title}${isExternal ? " (opens in a new tab)" : ""}`}
+            >
+              Visit live site
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M7 17L17 7M9 7h8v8" />
+              </svg>
+            </a>
+
+            {project.caseStudy && (
+              <a
+                className="wk-btn wk-btn--ghost"
+                href={project.caseStudy}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`Read the case study: ${project.title} (opens in a new tab)`}
+              >
+                Case study
+              </a>
+            )}
+          </div>
         </div>
       </div>
     </motion.article>
@@ -227,6 +255,7 @@ export default function Work() {
           inset:0;width:100%;
           height:100%;
           object-fit:cover;
+          object-position:top left;
           z-index:-2;
           transition:transform 1.2s cubic-bezier(.22,1,.36,1)
         }
@@ -308,6 +337,20 @@ export default function Work() {
         .wk-btn:focus-visible{
           outline:3px solid #ff78cb;
           outline-offset:3px
+        }
+        .wk-actions{
+          display:flex;
+          flex-wrap:wrap;
+          gap:.6rem
+        }
+        .wk-btn--ghost{
+          background:transparent;
+          color:#f4efe6;
+          border:1px solid rgba(244,239,230,.4)
+        }
+        .wk-btn--ghost:hover{
+          background:rgba(244,239,230,.12);
+          border-color:#ff78cb
         }
 
         /* ───────── Animated backgrounds ───────── */
