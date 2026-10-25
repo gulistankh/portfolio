@@ -1,7 +1,8 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, useInView, useReducedMotion } from "framer-motion";
 import saasboardCover from "../assets/saasboard-cover.png";
-// Example once you have clips: import clip1 from "../assets/videos/project-one.mp4";
+import saasboardDemo from "../assets/videos/saasboard-demo.mp4";
 
 /* ───────────── CONTENT (edit these) ───────────── */
 const PROJECTS = [
@@ -12,10 +13,10 @@ const PROJECTS = [
     url: "https://saasboard-app.vercel.app",
     caseStudy:
       "https://github.com/gulistankh/saasboard/blob/main/docs/case-study.md",
-    image: saasboardCover, // shown as the card background
+    image: saasboardCover, // thumbnail shown until the video plays
     live: true,
-    video: "", // when you add a video, it replaces the image
-    poster: "",
+    video: saasboardDemo, // silent preview on hover, full player on click
+    poster: saasboardCover,
   },
   {
     title: "Project Two",
@@ -40,6 +41,25 @@ const HEADING_TO = "rgb(243, 100, 171)";
 
 /* Three different animated backgrounds, one per card (repeats if you add more) */
 const BACKGROUNDS = ["aurora", "grid", "rings"];
+
+/* ───────────── Icons (Large, Backgroundless Bracket Style) ───────────── */
+const BracketPlayIcon = () => (
+  <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.8))" }}>
+    {/* Corner Brackets */}
+    <path d="M4 8V5a1 1 0 0 1 1-1h3" />
+    <path d="M20 8V5a1 1 0 0 0-1-1h-3" />
+    <path d="M4 16v3a1 1 0 0 0 1 1h3" />
+    <path d="M20 16v3a1 1 0 0 1-1 1h-3" />
+    {/* Play Triangle Inside */}
+    <polygon points="10,8 16,12 10,16" fill="currentColor" stroke="none" />
+  </svg>
+);
+
+const CloseIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M18 6 6 18M6 6l12 12" />
+  </svg>
+);
 
 function AnimatedBg({ kind }) {
   if (kind === "aurora") {
@@ -69,22 +89,140 @@ function AnimatedBg({ kind }) {
   );
 }
 
+/* ───────────── Pop-up player: big, but the site stays visible behind ───────────── */
+function VideoModal({ src, poster, title, onClose }) {
+  const dialogRef = useRef(null);
+  const closeRef = useRef(null);
+
+  useEffect(() => {
+    // Lock page scroll while the player is open
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    closeRef.current?.focus();
+
+    const onKey = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [onClose]);
+
+  // Keep Tab inside the player while it is open
+  const trapTab = (e) => {
+    if (e.key !== "Tab" || !dialogRef.current) return;
+    const nodes = dialogRef.current.querySelectorAll(
+      'button, video[controls], a[href], input, [tabindex]:not([tabindex="-1"])'
+    );
+    if (!nodes.length) return;
+    const first = nodes[0];
+    const last = nodes[nodes.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
+
+  return (
+    <div
+      className="wk-modal"
+      onKeyDown={trapTab}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose(); // click on the dark area closes
+      }}
+    >
+      <div
+        className="wk-dialog"
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${title} demo video`}
+      >
+        <div className="wk-dialog__bar">
+          <span>{title} · Demo walkthrough</span>
+          <button
+            ref={closeRef}
+            type="button"
+            className="wk-close"
+            onClick={onClose}
+            aria-label="Close video"
+          >
+            <CloseIcon />
+          </button>
+        </div>
+        <video
+          className="wk-dialog__video"
+          src={src}
+          poster={poster || undefined}
+          controls
+          autoPlay
+          playsInline
+          preload="auto"
+        />
+      </div>
+    </div>
+  );
+}
+
 function ProjectCard({ project, index }) {
   const reduce = useReducedMotion();
   const cardRef = useRef(null);
   const videoRef = useRef(null);
+  const triggerRef = useRef(null);
   const inView = useInView(cardRef, { amount: 0.45 });
+  const [hovered, setHovered] = useState(false);
+  const [open, setOpen] = useState(false); // pop-up player
+  const [playing, setPlaying] = useState(false); // thumbnail hides once frames show
+  const [touchOnly, setTouchOnly] = useState(false); // phones and tablets have no hover
   const isExternal = /^https?:\/\//.test(project.url);
   const bgKind = BACKGROUNDS[index % BACKGROUNDS.length];
   const isLive = Boolean(project.live);
+  const hasVideo = Boolean(project.video);
+  const thumb = project.poster || project.image;
 
-  // Play only while on screen (saves battery and bandwidth), pause otherwise
+  // Back to the thumbnail: stop and rewind the in-card preview
+  const resetPreview = useCallback(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.pause();
+    try {
+      v.currentTime = 0;
+    } catch {
+      /* metadata not loaded yet, nothing to reset */
+    }
+    setPlaying(false);
+  }, []);
+
+  // Detect devices without hover (touch screens)
+  useEffect(() => {
+    const mq = window.matchMedia("(hover: none)");
+    const update = () => setTouchOnly(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
+  // In-card preview (always silent): desktop plays on hover, touch plays while
+  // the card is on screen. Paused while the pop-up is open or for reduced motion.
+  const preview = !reduce && !open && (touchOnly ? inView : hovered);
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    if (inView && !reduce) v.play().catch(() => {});
-    else v.pause();
-  }, [inView, reduce]);
+    v.muted = true;
+    if (preview) v.play().catch(() => {});
+    else resetPreview();
+  }, [preview, resetPreview]);
+
+  const closeModal = useCallback(() => {
+    setOpen(false);
+    requestAnimationFrame(() => triggerRef.current?.focus());
+  }, []);
 
   return (
     <motion.article
@@ -94,19 +232,43 @@ function ProjectCard({ project, index }) {
       viewport={{ once: false, amount: 0.2 }}
       transition={{ duration: 0.9, delay: index * 0.12, ease: [0.22, 1, 0.36, 1] }}
     >
-      <div className="wk-card">
-        {project.video ? (
-          <video
-            ref={videoRef}
-            className="wk-video"
-            src={project.video}
-            poster={project.poster || undefined}
-            muted
-            loop
-            playsInline
-            preload="metadata"
-            aria-hidden="true"
-          />
+      <div
+        className={`wk-card${hasVideo ? " wk-card--media" : ""}`}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        {hasVideo ? (
+          <button
+            ref={triggerRef}
+            type="button"
+            className="wk-media"
+            onClick={() => setOpen(true)}
+            aria-label={`Watch the ${project.title} demo video in a larger view`}
+            aria-haspopup="dialog"
+          >
+            <video
+              ref={videoRef}
+              className="wk-media__el"
+              src={project.video}
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              aria-hidden="true"
+              onPlaying={() => setPlaying(true)}
+            />
+            {thumb && (
+              <img
+                className={`wk-media__el${playing ? " wk-media__el--hidden" : ""}`}
+                src={thumb}
+                alt=""
+                aria-hidden="true"
+              />
+            )}
+            <span className="wk-badge" aria-hidden="true">
+              <BracketPlayIcon />
+            </span>
+          </button>
         ) : project.image ? (
           <img
             className="wk-video"
@@ -117,16 +279,20 @@ function ProjectCard({ project, index }) {
         ) : (
           <AnimatedBg kind={bgKind} />
         )}
-        <div className="wk-shade" aria-hidden="true" />
 
-        <div className="wk-top">
-          {!isLive && (
-            <span className="wk-tag">
-              <span className="wk-dot" aria-hidden="true" />
-              Coming soon
-            </span>
-          )}
-        </div>
+        {!hasVideo && (
+          <>
+            <div className="wk-shade" aria-hidden="true" />
+            <div className="wk-top">
+              {!isLive && (
+                <span className="wk-tag">
+                  <span className="wk-dot" aria-hidden="true" />
+                  Coming soon
+                </span>
+              )}
+            </div>
+          </>
+        )}
 
         <div className="wk-body">
           <h3 className="wk-title">{project.title}</h3>
@@ -159,6 +325,19 @@ function ProjectCard({ project, index }) {
           </div>
         </div>
       </div>
+
+      {/* Rendered on document.body so the card's hover animation can't affect it */}
+      {open &&
+        hasVideo &&
+        createPortal(
+          <VideoModal
+            src={project.video}
+            poster={thumb}
+            title={project.title}
+            onClose={closeModal}
+          />,
+          document.body
+        )}
     </motion.article>
   );
 }
@@ -250,6 +429,81 @@ export default function Work() {
           border-color:rgba(0, 60, 255);
           box-shadow:0 30px 70px -30px rgba(0, 60, 255 ,.4)
         }
+
+        /* Card with a video: the video fills the whole top area edge to edge, text below */
+        .wk-card--media{
+          justify-content:flex-start;
+          gap:0;
+          padding:0;
+          background:radial-gradient(120% 70% at 50% 0%,rgba(0,60,255,.22),#07070f 70%)
+        }
+        .wk-card--media .wk-body{
+          flex:none;
+          padding:1.2rem 1.4rem 1.4rem
+        }
+        .wk-media{
+          position:relative;
+          display:block;
+          flex:1 1 auto;
+          width:100%;
+          min-height:12rem;
+          margin:0;
+          padding:0;
+          overflow:hidden;
+          border:0;
+          border-radius:0;
+          background:#000;
+          color:inherit;
+          font:inherit;
+          cursor:pointer
+        }
+        .wk-media:focus-visible{
+          outline:3px solid #ff78cb;
+          outline-offset:-3px
+        }
+        /* soft fade so the video blends into the text area */
+        .wk-media::after{
+          content:"";
+          position:absolute;
+          left:0;right:0;bottom:0;
+          height:28%;
+          background:linear-gradient(to top,#07070f 0%,rgba(7,7,15,0) 100%);
+          pointer-events:none
+        }
+        .wk-media__el{
+          position:absolute;
+          inset:0;
+          width:100%;
+          height:100%;
+          object-fit:cover; /* fills the area. Change to "contain" to show the whole frame instead */
+          object-position:top left;
+          transition:opacity .5s ease
+        }
+        .wk-media__el--hidden{
+          opacity:0
+        }
+        .wk-badge{
+          position:absolute;
+          z-index:1;
+          left:50%;
+          top:50%;
+          transform:translate(-50%, -50%) scale(0.85);
+          display:inline-flex;
+          align-items:center;
+          justify-content:center;
+          background:transparent;
+          border:none;
+          color:#f4efe6;
+          opacity: 0;
+          transition:all .3s cubic-bezier(.22,1,.36,1)
+        }
+        .wk-media:hover .wk-badge,
+        .wk-media:focus-visible .wk-badge{
+          opacity: 1;
+          transform:translate(-50%, -50%) scale(1.1);
+          color:#ff78cb;
+        }
+
         .wk-video{
           position:absolute;
           inset:0;width:100%;
@@ -345,12 +599,84 @@ export default function Work() {
         }
         .wk-btn--ghost{
           background:transparent;
-          color:#f4efe6;
+          color:#f6f3ec;
           border:1px solid rgba(244,239,230,.4)
         }
         .wk-btn--ghost:hover{
           background:rgba(244,239,230,.12);
           border-color:#ff78cb
+        }
+
+        /* ───────── Pop-up player ───────── */
+        .wk-modal{
+          position:fixed;
+          inset:0;
+          z-index:9999;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          padding:clamp(.75rem,3vw,2rem);
+          background:rgba(0,0,0,.72);
+          -webkit-backdrop-filter:blur(4px);
+          backdrop-filter:blur(4px);
+          animation:wk-fade .25s ease both
+        }
+        .wk-dialog{
+          width:min(100%,60rem);
+          display:flex;
+          flex-direction:column;
+          gap:.6rem;
+          animation:wk-pop .35s cubic-bezier(.22,1,.36,1) both
+        }
+        .wk-dialog__bar{
+          display:flex;
+          align-items:center;
+          justify-content:space-between;
+          gap:1rem;
+          color:#f6f3ec;
+          font:600 .95rem/1.2 system-ui,sans-serif
+        }
+        .wk-close{
+          display:inline-flex;
+          align-items:center;
+          justify-content:center;
+          flex:none;
+          width:2.4rem;height:2.4rem;
+          padding:0;
+          border:1px solid rgba(244,239,230,.35);
+          border-radius:50%;
+          background:rgba(0,0,0,.5);
+          color:#f6f3ec;
+          cursor:pointer;
+          transition:background .2s,color .2s
+        }
+        .wk-close:hover{
+          background:#ff78cb;
+          color:#0b0d1c
+        }
+        .wk-close:focus-visible{
+          outline:3px solid #ff78cb;
+          outline-offset:3px
+        }
+        .wk-dialog__video{
+          display:block;
+          width:100%;
+          aspect-ratio:16/9;
+          max-height:calc(100vh - 7.5rem);
+          max-height:calc(100dvh - 7.5rem);
+          object-fit:contain;
+          background:#000;
+          border:1px solid rgba(243,100,172,.45);
+          border-radius:.9rem;
+          box-shadow:0 40px 100px -30px rgba(0,0,0,.9)
+        }
+        @keyframes wk-fade{
+          from{opacity:0}
+          to{opacity:1}
+        }
+        @keyframes wk-pop{
+          from{opacity:0;transform:translateY(14px) scale(.97)}
+          to{opacity:1;transform:none}
         }
 
         /* ───────── Animated backgrounds ───────── */
@@ -468,8 +794,9 @@ export default function Work() {
         }
 
         @media(prefers-reduced-motion:reduce){
-          .wk-card,.wk-video{transition:none}
+          .wk-card,.wk-video,.wk-media__el,.wk-close{transition:none}
           .wk-card:hover{transform:none}
+          .wk-modal,.wk-dialog{animation:none}
           .wk-blob,.wk-gridlines,.wk-scan,.wk-ring,.wk-core,.wk-dot{animation:none}
           .wk-ring--1{opacity:.5;transform:scale(.7)}
           .wk-scan{opacity:0}
