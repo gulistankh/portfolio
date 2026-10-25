@@ -503,6 +503,13 @@ export default function Work() {
           transform:translate(-50%, -50%) scale(1.1);
           color:#ff78cb;
         }
+        
+        @media (hover: none) {
+          .wk-badge{
+            opacity:1;
+            color:#f4efe6
+          }
+        }
 
         .wk-video{
           position:absolute;
