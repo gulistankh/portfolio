@@ -629,6 +629,11 @@ export default function Contact() {
         @media(min-width:900px){
           .ct-mascot{ width:clamp(13rem,22vw,17rem) }
         }
+          
+        @media(max-width:639px){
+          .ct-mascot{ display:none }
+        }
+
         .ct-mascot svg{ width:100%; height:auto; overflow:visible; display:block }
         .ct-bubble{
           position:relative;

@@ -5,16 +5,16 @@ import profile from "../assets/profile.PNG";
 
 /* ───────────── CONTENT (edit these) ───────────── */
 const NAME = "Gulistan";
-const ROLE = "Full-Stack Developer & UI/UX Designer";
+const ROLE = "UI/UX Designer & Full-Stack Developer";
 
 const PARAGRAPHS = [
-  "I help founders turn software ideas into fully functional, market-ready web applications.",
-  "A strong business vision is only the first step. Execution is where it becomes a product your customers can log in to, navigate, and rely on. Most founders end up juggling communication between separate designers, frontend developers, and backend engineers. I simplify that by being your single dedicated partner across the entire build.",
+  "I help B2B SaaS founders turn ideas into secure, working web apps.",
+  "A strong business idea is only the first step. The real work is turning it into a product your customers can log in to, find their way around, and trust with their data. Most founders end up passing messages between separate designers and developers. I simplify that by being your one dedicated partner, from first idea to launch.",
 ];
 
 // Shown only after clicking "Read more"
 const MORE_TEXT =
-  "My goal is simple: take the complexity out of software development and deliver a reliable web app that helps you validate your idea, launch with confidence, and grow your business.";
+  "My goal is simple: take the complexity out of building software, so you can get a reliable first version in front of real customers, learn what works, and grow from there.";
 
 /* Must match CONFIG.endColor in GalaxyHero so there is no seam */
 const BG = "#000000";

@@ -297,9 +297,9 @@ export default function GalaxyHero() {
             textShadow: "0 2px 24px rgba(0,0,0,.6)",
           }}
         >
-          <h1 className="gh-h1">From Business Concept to Functional Web Application</h1>
+          <h1 className="gh-h1">From SaaS Idea to a Secure, Working Web App</h1>
           <p className="gh-sub">
-            One dedicated UI/UX designer &amp; full-stack developer to bring your digital product to life.
+            One dedicated UI/UX designer &amp; full-stack developer to bring your SaaS product to life.
           </p>
           <div className="gh-actions gh-cta-container">
             <a className="gh-cta"  href="#contact">Build Your Web App</a>
