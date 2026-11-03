@@ -3,6 +3,8 @@ import { createPortal } from "react-dom";
 import { motion, useInView, useReducedMotion } from "framer-motion";
 import saasboardCover from "../assets/saasboard-cover.png";
 import saasboardDemo from "../assets/videos/saasboard-demo.mp4";
+import orbitCover from "../assets/orbit-crm-cover.png";
+import orbitDemo from "../assets/videos/orbit-crm-demo.mp4";
 
 /* ───────────── CONTENT (edit these) ───────────── */
 const PROJECTS = [
@@ -19,11 +21,16 @@ const PROJECTS = [
     poster: saasboardCover,
   },
   {
-    title: "Project Two",
-    description: "New projects in progress. Live previews coming soon ⏳",
-    url: "#",
-    video: "",
-    poster: "",
+    title: "Orbit CRM",
+    description:
+      "A lightweight CRM that replaces messy sales spreadsheets, with a drag-and-drop pipeline and role-based permissions enforced on the server. Try the demo with one click.",
+    url: "https://orbit-crm-gamma-ten.vercel.app",
+    caseStudy:
+      "https://github.com/gulistankh/orbit-crm/blob/main/docs/case-study.md",
+    image: orbitCover,
+    live: true,
+    video: orbitDemo,
+    poster: orbitCover,
   },
   {
     title: "Project Three",
@@ -43,15 +50,9 @@ const HEADING_TO = "rgb(243, 100, 171)";
 const BACKGROUNDS = ["aurora", "grid", "rings"];
 
 /* ───────────── Icons (Large, Backgroundless Bracket Style) ───────────── */
-const BracketPlayIcon = () => (
-  <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.8))" }}>
-    {/* Corner Brackets */}
-    <path d="M4 8V5a1 1 0 0 1 1-1h3" />
-    <path d="M20 8V5a1 1 0 0 0-1-1h-3" />
-    <path d="M4 16v3a1 1 0 0 0 1 1h3" />
-    <path d="M20 16v3a1 1 0 0 1-1 1h-3" />
-    {/* Play Triangle Inside */}
-    <polygon points="10,8 16,12 10,16" fill="currentColor" stroke="none" />
+const PlayIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M8 5.14v13.72a1 1 0 0 0 1.52.85l11.1-6.86a1 1 0 0 0 0-1.7L9.52 4.29A1 1 0 0 0 8 5.14z" />
   </svg>
 );
 
@@ -266,7 +267,7 @@ function ProjectCard({ project, index }) {
               />
             )}
             <span className="wk-badge" aria-hidden="true">
-              <BracketPlayIcon />
+              <PlayIcon />
             </span>
           </button>
         ) : project.image ? (
@@ -487,27 +488,51 @@ export default function Work() {
           z-index:1;
           left:50%;
           top:50%;
+          width:4rem;
+          height:4rem;
+          padding-left:3px; /* the triangle looks centered when nudged slightly right */
+          border-radius:50%;
           transform:translate(-50%, -50%) scale(0.85);
           display:inline-flex;
           align-items:center;
           justify-content:center;
-          background:transparent;
-          border:none;
+          background:rgba(0,0,0,.38);
+          border:1.5px solid rgba(244,239,230,.7);
+          -webkit-backdrop-filter:blur(6px);
+          backdrop-filter:blur(6px);
           color:#f4efe6;
-          opacity: 0;
+          opacity:0;
           transition:all .3s cubic-bezier(.22,1,.36,1)
+        }
+        .wk-badge::after{
+          content:"";
+          position:absolute;
+          inset:-6px;
+          border-radius:50%;
+          border:1.5px solid rgba(255,120,203,.7);
+          opacity:0
         }
         .wk-media:hover .wk-badge,
         .wk-media:focus-visible .wk-badge{
-          opacity: 1;
-          transform:translate(-50%, -50%) scale(1.1);
-          color:#ff78cb;
+          opacity:1;
+          transform:translate(-50%, -50%) scale(1.08);
+          background:#ff78cb;
+          border-color:#ff78cb;
+          color:#0b0d1c
         }
-        
+        .wk-media:hover .wk-badge::after,
+        .wk-media:focus-visible .wk-badge::after{
+          animation:wk-ping 1.5s cubic-bezier(.2,.6,.3,1) infinite
+        }
+        @keyframes wk-ping{
+          0%{opacity:.9;transform:scale(.9)}
+          100%{opacity:0;transform:scale(1.5)}
+        }
+
+        /* phones and tablets have no hover, so the button is always visible */
         @media (hover: none) {
           .wk-badge{
-            opacity:1;
-            color:#f4efe6
+            opacity:1
           }
         }
 
@@ -804,6 +829,7 @@ export default function Work() {
           .wk-card,.wk-video,.wk-media__el,.wk-close{transition:none}
           .wk-card:hover{transform:none}
           .wk-modal,.wk-dialog{animation:none}
+          .wk-badge::after{animation:none}
           .wk-blob,.wk-gridlines,.wk-scan,.wk-ring,.wk-core,.wk-dot{animation:none}
           .wk-ring--1{opacity:.5;transform:scale(.7)}
           .wk-scan{opacity:0}
